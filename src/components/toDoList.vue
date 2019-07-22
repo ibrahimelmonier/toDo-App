@@ -2,16 +2,8 @@
     <div>
         <input type="text" class="todo-input" placeholder="What needs to be done" v-model="newTodo" @keyup.enter="addTodo">
         <transition-group name="fade" enter-active-class="animated fadeInUp" leave-active-class="animated fadeOutDown">
-            <div v-for="(todo , index) in todosFiltered" :key="todo.id" class="todo-item">
-                <div class="todo-item-left">
-                    <input type="checkbox" v-model="todo.completed">
-                    <div v-if="!todo.editing" @dblclick="editTodo(todo)" class="todo-item-label" :class="{ completed : todo.completed }">{{ todo.title }}</div>
-                    <input v-else class="todo-item-edit" type="text" v-model="todo.title" @blur="doneEdit(todo)" @keyup.enter="doneEdit(todo)" @keyup.esc="cancelEdit(todo)" v-focus>
-                </div>
-                <div class="remove-item" @click="removeTodo(index)">
-                    &times;
-                </div>
-            </div>
+            <toDoItem v-for="(todo) in todosFiltered" :key="todo.id" :todo="todo" :checkAll="!leftTodo">
+            </toDoItem>
         </transition-group>
 
         <div class="extra">
@@ -47,8 +39,13 @@
 </template>
 
 <script>
+    import ToDoItem from './toDoItem.vue';
+
     export default {
         name: 'ToDoList',
+        components: {
+            ToDoItem,
+        },
         // props: {
         //     msg: String
         // },
@@ -73,6 +70,10 @@
                 ]
             }
         },
+        created() {
+            eventBus.$on('removedTodo', (id) => this.removeTodo(id));
+            eventBus.$on('finishedEdit', (data) => this.finishedEdit(data));
+        },
         computed: {
             left() {
                 return this.todos.filter(todo => !todo.completed).length
@@ -93,14 +94,6 @@
                 return this.todos.filter(todo => todo.completed).length > 0
             }
         },
-        directives: {
-            focus: {
-                // directive definition
-                inserted: function (el) {
-                    el.focus()
-                }
-            }
-        },
         methods: {
             addTodo() {
                 if (this.newTodo.trim().length == 0) {
@@ -114,21 +107,8 @@
                 this.newTodo = ''
                 this.idForTodo++
             },
-            editTodo(todo) {
-                this.beforeEdit = todo.title
-                todo.editing = true
-            },
-            doneEdit(todo) {
-                if (todo.title.trim().length == 0 && todo.title.trim().length == '') {
-                    todo.title = this.beforeEdit
-                }
-                todo.editing = false
-            },
-            cancelEdit(todo) {
-                todo.title = this.beforeEdit
-                todo.editing = false
-            },
-            removeTodo(index) {
+            removeTodo(id) {
+                const index = this.todos.findIndex((item) => item.id == id);
                 this.todos.splice(index, 1)
             },
             checkAllTodos() {
@@ -136,6 +116,10 @@
             },
             clearCompleted() {
                 this.todos = this.todos.filter(todo => !todo.completed)
+            },
+            finishedEdit(data) {
+                const index = this.todos.findIndex((item) => item.id == data.id);
+                this.todos.splice(index, 1, data)
             }
         }
     }
